@@ -32,9 +32,41 @@ export interface Lesson {
   workshopId: string;
   title: string;
   contentURI: string;
+  content?: string;  // Added for text-based lessons
   requiresReflection: boolean;
   order: number;
   estimatedDuration: number;
   createdAt: Date | { seconds: number; nanoseconds: number };
   updatedAt: Date | { seconds: number; nanoseconds: number };
 }
+
+export interface Registration {
+  id?: string;
+  workshopId: string;
+  learnerId: string;
+  learnerName?: string;
+  registeredAt: Date | { seconds: number; nanoseconds: number };
+}
+
+export interface Reflection {
+  id?: string;
+  lessonId: string;
+  learnerId: string;
+  learnerName?: string;
+  content: string;
+  submittedAt: Date | { seconds: number; nanoseconds: number };
+  reviewed?: boolean;
+}
+
+export interface Progress {
+  id?: string;
+  lessonId: string;
+  learnerId: string;
+  reflectionId?: string;
+  reflectionStatus: "approved" | "rejected" | "pending";
+  points: number;
+  reviewedBy: string;
+  reviewedAt: Date | { seconds: number; nanoseconds: number };
+}
+
+export type ReflectionStatus = "approved" | "rejected" | "pending";

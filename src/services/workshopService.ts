@@ -1,11 +1,14 @@
 
 import { collection, addDoc, updateDoc, doc, getDoc, getDocs, query, where, serverTimestamp, orderBy, limit, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Workshop, Lesson } from "@/lib/types";
+import { Workshop, Lesson, Registration, Reflection, Progress, ReflectionStatus } from "@/lib/types";
 
-// Workshop collection references
+// Collection references
 const workshopsCollection = collection(db, "workshops");
 const lessonsCollection = collection(db, "lessons");
+const registrationsCollection = collection(db, "registrations");
+const reflectionsCollection = collection(db, "reflections");
+const progressCollection = collection(db, "progress");
 
 // Workshop CRUD operations
 export const createWorkshop = async (workshopData: Omit<Workshop, "id" | "createdAt" | "updatedAt">) => {
@@ -186,10 +189,275 @@ export const updateLesson = async (lessonId: string, lessonData: Partial<Lesson>
 
 export const deleteLesson = async (lessonId: string) => {
   try {
+    // First delete associated reflections and progress
+    const reflectionsQuery = query(reflectionsCollection, where("lessonId", "==", lessonId));
+    const progressQuery = query(progressCollection, where("lessonId", "==", lessonId));
+    
+    const reflectionSnapshots = await getDocs(reflectionsQuery);
+    const progressSnapshots = await getDocs(progressQuery);
+    
+    const deleteReflectionPromises = reflectionSnapshots.docs.map((docSnapshot) => {
+      return deleteDoc(doc(db, "reflections", docSnapshot.id));
+    });
+    
+    const deleteProgressPromises = progressSnapshots.docs.map((docSnapshot) => {
+      return deleteDoc(doc(db, "progress", docSnapshot.id));
+    });
+    
+    await Promise.all([...deleteReflectionPromises, ...deleteProgressPromises]);
+    
+    // Then delete the lesson
     await deleteDoc(doc(db, "lessons", lessonId));
+    
     return { success: true };
   } catch (error) {
     console.error("Error deleting lesson:", error);
+    throw error;
+  }
+};
+
+// Registration operations
+export const registerForWorkshop = async (workshopId: string, learnerId: string, learnerName?: string) => {
+  try {
+    // Check if already registered
+    const q = query(
+      registrationsCollection,
+      where("workshopId", "==", workshopId),
+      where("learnerId", "==", learnerId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, alreadyRegistered: true };
+    }
+    
+    const docRef = await addDoc(registrationsCollection, {
+      workshopId,
+      learnerId,
+      learnerName,
+      registeredAt: serverTimestamp()
+    });
+    
+    return { id: docRef.id, alreadyRegistered: false };
+  } catch (error) {
+    console.error("Error registering for workshop:", error);
+    throw error;
+  }
+};
+
+export const getRegistrationsForWorkshop = async (workshopId: string) => {
+  try {
+    const q = query(
+      registrationsCollection,
+      where("workshopId", "==", workshopId),
+      orderBy("registeredAt", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const registrations: Registration[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      registrations.push({ id: doc.id, ...doc.data() } as Registration);
+    });
+    
+    return registrations;
+  } catch (error) {
+    console.error("Error fetching registrations:", error);
+    throw error;
+  }
+};
+
+export const getRegistrationsByLearner = async (learnerId: string) => {
+  try {
+    const q = query(
+      registrationsCollection,
+      where("learnerId", "==", learnerId),
+      orderBy("registeredAt", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const registrations: Registration[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      registrations.push({ id: doc.id, ...doc.data() } as Registration);
+    });
+    
+    return registrations;
+  } catch (error) {
+    console.error("Error fetching registrations:", error);
+    throw error;
+  }
+};
+
+// Reflection operations
+export const submitReflection = async (lessonId: string, learnerId: string, content: string, learnerName?: string) => {
+  try {
+    const docRef = await addDoc(reflectionsCollection, {
+      lessonId,
+      learnerId,
+      learnerName,
+      content,
+      submittedAt: serverTimestamp(),
+      reviewed: false
+    });
+    
+    // Also create a progress entry with pending status
+    await addDoc(progressCollection, {
+      lessonId,
+      learnerId,
+      reflectionId: docRef.id,
+      reflectionStatus: "pending",
+      points: 0,
+      reviewedBy: "",
+      reviewedAt: serverTimestamp()
+    });
+    
+    return { id: docRef.id };
+  } catch (error) {
+    console.error("Error submitting reflection:", error);
+    throw error;
+  }
+};
+
+export const getReflectionsByLesson = async (lessonId: string) => {
+  try {
+    const q = query(
+      reflectionsCollection,
+      where("lessonId", "==", lessonId),
+      orderBy("submittedAt", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const reflections: Reflection[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      reflections.push({ id: doc.id, ...doc.data() } as Reflection);
+    });
+    
+    return reflections;
+  } catch (error) {
+    console.error("Error fetching reflections:", error);
+    throw error;
+  }
+};
+
+export const getReflectionsByLearner = async (learnerId: string) => {
+  try {
+    const q = query(
+      reflectionsCollection,
+      where("learnerId", "==", learnerId),
+      orderBy("submittedAt", "desc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const reflections: Reflection[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      reflections.push({ id: doc.id, ...doc.data() } as Reflection);
+    });
+    
+    return reflections;
+  } catch (error) {
+    console.error("Error fetching reflections:", error);
+    throw error;
+  }
+};
+
+export const reviewReflection = async (
+  reflectionId: string, 
+  status: ReflectionStatus, 
+  reviewerId: string
+) => {
+  try {
+    // Get the reflection
+    const reflectionRef = doc(db, "reflections", reflectionId);
+    const reflectionSnap = await getDoc(reflectionRef);
+    
+    if (!reflectionSnap.exists()) {
+      throw new Error("Reflection not found");
+    }
+    
+    const reflection = { id: reflectionSnap.id, ...reflectionSnap.data() } as Reflection;
+    
+    // Update the reflection
+    await updateDoc(reflectionRef, {
+      reviewed: true
+    });
+    
+    // Find existing progress document or create new one
+    const progressQuery = query(
+      progressCollection,
+      where("reflectionId", "==", reflectionId)
+    );
+    
+    const progressSnap = await getDocs(progressQuery);
+    
+    let points = 0;
+    if (status === "approved") {
+      points = 50;
+    } else if (status === "rejected") {
+      points = -30;
+    }
+    
+    if (progressSnap.empty) {
+      // Create new progress entry
+      await addDoc(progressCollection, {
+        lessonId: reflection.lessonId,
+        learnerId: reflection.learnerId,
+        reflectionId,
+        reflectionStatus: status,
+        points,
+        reviewedBy: reviewerId,
+        reviewedAt: serverTimestamp()
+      });
+    } else {
+      // Update existing progress entry
+      const progressRef = doc(db, "progress", progressSnap.docs[0].id);
+      await updateDoc(progressRef, {
+        reflectionStatus: status,
+        points,
+        reviewedBy: reviewerId,
+        reviewedAt: serverTimestamp()
+      });
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error reviewing reflection:", error);
+    throw error;
+  }
+};
+
+export const getLearnerProgress = async (learnerId: string) => {
+  try {
+    const q = query(
+      progressCollection,
+      where("learnerId", "==", learnerId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const progress: Progress[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      progress.push({ id: doc.id, ...doc.data() } as Progress);
+    });
+    
+    return progress;
+  } catch (error) {
+    console.error("Error fetching learner progress:", error);
+    throw error;
+  }
+};
+
+export const getTotalPoints = async (learnerId: string) => {
+  try {
+    const progress = await getLearnerProgress(learnerId);
+    
+    const totalPoints = progress.reduce((sum, item) => sum + item.points, 0);
+    
+    return totalPoints;
+  } catch (error) {
+    console.error("Error calculating total points:", error);
     throw error;
   }
 };

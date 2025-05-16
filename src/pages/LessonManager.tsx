@@ -3,12 +3,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash, GripVertical, ArrowLeft } from "lucide-react";
+import { PlusCircle, Edit, Trash, GripVertical, ArrowLeft, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Lesson, Workshop } from "@/lib/types";
-import { getLessonsByWorkshop, deleteLesson, updateLesson, getWorkshopById } from "@/services/workshopService";
+import { getLessonsByWorkshop, deleteLesson, updateLesson, getWorkshopById, getReflectionsByLesson } from "@/services/workshopService";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 const LessonManager = () => {
   const { workshopId } = useParams<{ workshopId: string }>();
@@ -29,6 +30,7 @@ const LessonManager = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
+  const [reflectionCounts, setReflectionCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,6 +45,25 @@ const LessonManager = () => {
         // Fetch lessons for this workshop
         const lessonData = await getLessonsByWorkshop(workshopId);
         setLessons(lessonData);
+        
+        // Fetch reflection counts for each lesson
+        const reflectionPromises = lessonData.map(async (lesson) => {
+          if (lesson.id) {
+            const reflections = await getReflectionsByLesson(lesson.id);
+            return { lessonId: lesson.id, count: reflections.length };
+          }
+          return { lessonId: '', count: 0 };
+        });
+        
+        const reflectionResults = await Promise.all(reflectionPromises);
+        const countsObj: Record<string, number> = {};
+        reflectionResults.forEach(result => {
+          if (result.lessonId) {
+            countsObj[result.lessonId] = result.count;
+          }
+        });
+        
+        setReflectionCounts(countsObj);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
@@ -64,6 +85,10 @@ const LessonManager = () => {
 
   const handleEditLesson = (lessonId: string) => {
     navigate(`/workshops/${workshopId}/lessons/${lessonId}/edit`);
+  };
+  
+  const handleViewReflections = (lessonId: string) => {
+    navigate(`/workshops/${workshopId}/lessons/${lessonId}/reflections`);
   };
 
   const confirmDelete = (lessonId: string) => {
@@ -223,13 +248,29 @@ const LessonManager = () => {
                           Duration: {lesson.estimatedDuration} minutes
                         </span>
                         {lesson.requiresReflection && (
-                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                             Reflection Required
-                          </span>
+                          </Badge>
+                        )}
+                        {(reflectionCounts[lesson.id as string] ?? 0) > 0 && (
+                          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">
+                            {reflectionCounts[lesson.id as string]} Reflections
+                          </Badge>
                         )}
                       </div>
                     </div>
                     <div className="p-4 flex items-center gap-2">
+                      {lesson.requiresReflection && (reflectionCounts[lesson.id as string] ?? 0) > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewReflections(lesson.id as string)}
+                          className="flex items-center gap-1"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Review
+                        </Button>
+                      )}
                       <Button 
                         variant="outline" 
                         size="sm"

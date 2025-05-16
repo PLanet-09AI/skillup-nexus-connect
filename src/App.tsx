@@ -12,6 +12,11 @@ import NotFound from "@/pages/NotFound";
 import WorkshopManager from "@/pages/WorkshopManager";
 import WorkshopForm from "@/pages/WorkshopForm";
 import LessonManager from "@/pages/LessonManager";
+import LessonForm from "@/pages/LessonForm";
+import LessonView from "@/pages/LessonView";
+import ReflectionReview from "@/pages/ReflectionReview";
+import WorkshopBrowser from "@/pages/WorkshopBrowser";
+import WorkshopView from "@/pages/WorkshopView";
 import { AuthProvider } from "@/hooks/use-auth";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import RoleBasedRoute from "@/components/auth/RoleBasedRoute";
@@ -47,7 +52,27 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <RoleBasedRoute roles={["job_seeker"]}>
-                    <div>Workshops page placeholder</div>
+                    <WorkshopBrowser />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workshops/:workshopId"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute roles={["job_seeker"]}>
+                    <WorkshopView />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workshops/:workshopId/lessons/:lessonId"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute roles={["job_seeker"]}>
+                    <LessonView />
                   </RoleBasedRoute>
                 </ProtectedRoute>
               }
@@ -108,6 +133,36 @@ const App = () => (
                 <ProtectedRoute>
                   <RoleBasedRoute roles={["recruiter"]}>
                     <LessonManager />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workshops/:workshopId/create-lesson"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute roles={["recruiter"]}>
+                    <LessonForm />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workshops/:workshopId/lessons/:lessonId/edit"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute roles={["recruiter"]}>
+                    <LessonForm />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workshops/:workshopId/lessons/:lessonId/reflections"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute roles={["recruiter"]}>
+                    <ReflectionReview />
                   </RoleBasedRoute>
                 </ProtectedRoute>
               }
