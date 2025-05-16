@@ -1,4 +1,3 @@
-
 import { collection, addDoc, updateDoc, doc, getDoc, getDocs, query, where, serverTimestamp, orderBy, limit, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Workshop, Lesson, Registration, Reflection, Progress, ReflectionStatus } from "@/lib/types";
@@ -13,12 +12,14 @@ const progressCollection = collection(db, "progress");
 // Workshop CRUD operations
 export const createWorkshop = async (workshopData: Omit<Workshop, "id" | "createdAt" | "updatedAt">) => {
   try {
+    console.log("Creating workshop with data:", workshopData);
     const docRef = await addDoc(workshopsCollection, {
       ...workshopData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
     
+    console.log("Workshop created with ID:", docRef.id);
     return { id: docRef.id };
   } catch (error) {
     console.error("Error creating workshop:", error);
@@ -28,12 +29,16 @@ export const createWorkshop = async (workshopData: Omit<Workshop, "id" | "create
 
 export const getWorkshopById = async (workshopId: string) => {
   try {
+    console.log("Fetching workshop with ID:", workshopId);
     const docRef = doc(db, "workshops", workshopId);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as Workshop;
+      const workshop = { id: docSnap.id, ...docSnap.data() } as Workshop;
+      console.log("Workshop found:", workshop);
+      return workshop;
     } else {
+      console.error("Workshop not found with ID:", workshopId);
       throw new Error("Workshop not found");
     }
   } catch (error) {
@@ -44,6 +49,7 @@ export const getWorkshopById = async (workshopId: string) => {
 
 export const getWorkshopsByCreator = async (creatorId: string) => {
   try {
+    console.log("Fetching workshops for creator ID:", creatorId);
     const q = query(
       workshopsCollection, 
       where("creatorId", "==", creatorId),
@@ -57,6 +63,7 @@ export const getWorkshopsByCreator = async (creatorId: string) => {
       workshops.push({ id: doc.id, ...doc.data() } as Workshop);
     });
     
+    console.log(`Found ${workshops.length} workshops for creator ${creatorId}:`, workshops);
     return workshops;
   } catch (error) {
     console.error("Error fetching workshops by creator:", error);
@@ -66,6 +73,7 @@ export const getWorkshopsByCreator = async (creatorId: string) => {
 
 export const getAllWorkshops = async () => {
   try {
+    console.log("Fetching all workshops");
     const q = query(workshopsCollection, orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
     const workshops: Workshop[] = [];
@@ -74,6 +82,7 @@ export const getAllWorkshops = async () => {
       workshops.push({ id: doc.id, ...doc.data() } as Workshop);
     });
     
+    console.log(`Found ${workshops.length} workshops:`, workshops);
     return workshops;
   } catch (error) {
     console.error("Error fetching all workshops:", error);
@@ -219,6 +228,7 @@ export const deleteLesson = async (lessonId: string) => {
 // Registration operations
 export const registerForWorkshop = async (workshopId: string, learnerId: string, learnerName?: string) => {
   try {
+    console.log(`Registering learner ${learnerId} for workshop ${workshopId}`);
     // Check if already registered
     const q = query(
       registrationsCollection,
@@ -228,6 +238,7 @@ export const registerForWorkshop = async (workshopId: string, learnerId: string,
     
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
+      console.log("Learner already registered for this workshop");
       return { id: querySnapshot.docs[0].id, alreadyRegistered: true };
     }
     
@@ -238,6 +249,7 @@ export const registerForWorkshop = async (workshopId: string, learnerId: string,
       registeredAt: serverTimestamp()
     });
     
+    console.log("Registration successful with ID:", docRef.id);
     return { id: docRef.id, alreadyRegistered: false };
   } catch (error) {
     console.error("Error registering for workshop:", error);
@@ -247,6 +259,7 @@ export const registerForWorkshop = async (workshopId: string, learnerId: string,
 
 export const getRegistrationsForWorkshop = async (workshopId: string) => {
   try {
+    console.log(`Fetching registrations for workshop ${workshopId}`);
     const q = query(
       registrationsCollection,
       where("workshopId", "==", workshopId),
@@ -260,6 +273,7 @@ export const getRegistrationsForWorkshop = async (workshopId: string) => {
       registrations.push({ id: doc.id, ...doc.data() } as Registration);
     });
     
+    console.log(`Found ${registrations.length} registrations for workshop ${workshopId}`);
     return registrations;
   } catch (error) {
     console.error("Error fetching registrations:", error);
@@ -269,6 +283,7 @@ export const getRegistrationsForWorkshop = async (workshopId: string) => {
 
 export const getRegistrationsByLearner = async (learnerId: string) => {
   try {
+    console.log(`Fetching registrations for learner ${learnerId}`);
     const q = query(
       registrationsCollection,
       where("learnerId", "==", learnerId),
@@ -282,6 +297,7 @@ export const getRegistrationsByLearner = async (learnerId: string) => {
       registrations.push({ id: doc.id, ...doc.data() } as Registration);
     });
     
+    console.log(`Found ${registrations.length} registrations for learner ${learnerId}`);
     return registrations;
   } catch (error) {
     console.error("Error fetching registrations:", error);

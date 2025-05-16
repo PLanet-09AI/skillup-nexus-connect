@@ -39,6 +39,9 @@ const WorkshopBrowser = () => {
           getRegistrationsByLearner(user.uid)
         ]);
         
+        console.log("Fetched workshops:", workshopData);
+        console.log("Fetched registrations:", registrationData);
+        
         // Only show open workshops
         const openWorkshops = workshopData.filter(w => w.schedule.isOpen);
         setWorkshops(openWorkshops);
@@ -123,6 +126,7 @@ const WorkshopBrowser = () => {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <p className="text-lg text-gray-500">No workshops are currently available.</p>
+              <p className="text-sm text-gray-400 mt-2">Check back later for upcoming workshops.</p>
             </CardContent>
           </Card>
         ) : (
@@ -131,7 +135,7 @@ const WorkshopBrowser = () => {
               <Card key={workshop.id} className="overflow-hidden h-full flex flex-col">
                 <CardHeader className="pb-2">
                   <CardTitle>{workshop.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">
+                  <CardDescription className="line-clamp-3">
                     {workshop.description}
                   </CardDescription>
                 </CardHeader>
@@ -146,13 +150,21 @@ const WorkshopBrowser = () => {
                     </div>
                   </div>
                   <div className="text-sm text-gray-500">
-                    <p>Skills: {workshop.skillsAddressed.join(", ")}</p>
-                    <p className="mt-1">
-                      Start Date: {convertTimestampToDate(workshop.schedule.startDate).toLocaleDateString()}
+                    <p className="mb-1"><span className="font-semibold">Skills:</span> {workshop.skillsAddressed.map(skill => skill.length > 50 ? skill.substring(0, 50) + '...' : skill).join(", ")}</p>
+                    <p className="mb-1">
+                      <span className="font-semibold">Start Date:</span> {convertTimestampToDate(workshop.schedule.startDate).toLocaleDateString()}
                     </p>
+                    {workshop.schedule.endDate && (
+                      <p className="mb-1">
+                        <span className="font-semibold">End Date:</span> {convertTimestampToDate(workshop.schedule.endDate).toLocaleDateString()}
+                      </p>
+                    )}
+                    {workshop.creatorName && (
+                      <p className="mb-1"><span className="font-semibold">Creator:</span> {workshop.creatorName}</p>
+                    )}
                   </div>
                 </CardContent>
-                <CardFooter className="border-t">
+                <CardFooter className="border-t pt-4">
                   {isRegistered(workshop.id as string) ? (
                     <Button 
                       onClick={() => handleViewWorkshop(workshop.id as string)}
@@ -168,11 +180,16 @@ const WorkshopBrowser = () => {
                       disabled={processingIds.includes(workshop.id as string)}
                     >
                       {processingIds.includes(workshop.id as string) ? (
-                        <span className="animate-spin mr-2">⏳</span>
+                        <div className="flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                          Registering...
+                        </div>
                       ) : (
-                        <Check className="mr-2 h-4 w-4" />
+                        <>
+                          <Check className="mr-2 h-4 w-4" />
+                          Register
+                        </>
                       )}
-                      Register
                     </Button>
                   )}
                 </CardFooter>

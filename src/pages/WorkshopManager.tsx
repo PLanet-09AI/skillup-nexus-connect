@@ -55,6 +55,7 @@ const WorkshopManager = () => {
       try {
         setIsLoading(true);
         const workshopData = await getWorkshopsByCreator(user.uid);
+        console.log("Fetched workshops for creator:", workshopData);
         setWorkshops(workshopData);
       } catch (error) {
         console.error("Error fetching workshops:", error);
@@ -194,9 +195,9 @@ const WorkshopManager = () => {
                       </div>
                       <div>
                         <h4 className="text-sm font-medium text-gray-500">Skills Addressed</h4>
-                        <p className="text-sm line-clamp-1">
+                        <p className="text-sm line-clamp-2">
                           {workshop.skillsAddressed.map(skill => 
-                            truncateText(skill, 60)
+                            skill.length > 60 ? skill.substring(0, 60) + "..." : skill
                           ).join(", ")}
                         </p>
                       </div>

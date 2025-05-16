@@ -63,7 +63,7 @@ export interface Progress {
   lessonId: string;
   learnerId: string;
   reflectionId?: string;
-  reflectionStatus: "approved" | "rejected" | "pending";
+  reflectionStatus: ReflectionStatus;
   points: number;
   reviewedBy: string;
   reviewedAt: Date | { seconds: number; nanoseconds: number };

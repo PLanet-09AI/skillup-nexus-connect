@@ -10,6 +10,15 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { getWorkshopById, getLessonsByWorkshop, getRegistrationsByLearner } from "@/services/workshopService";
 import { Workshop, Lesson } from "@/lib/types";
 
+// Helper function to safely convert Firestore timestamp to Date
+const convertTimestampToDate = (timestamp: any): Date => {
+  if (timestamp instanceof Date) return timestamp;
+  if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
+    return new Date(timestamp.seconds * 1000);
+  }
+  return new Date();
+};
+
 const WorkshopView = () => {
   const { workshopId } = useParams<{ workshopId: string }>();
   const navigate = useNavigate();
@@ -31,6 +40,10 @@ const WorkshopView = () => {
           getLessonsByWorkshop(workshopId),
           getRegistrationsByLearner(user.uid)
         ]);
+        
+        console.log("Workshop data:", workshopData);
+        console.log("Lesson data:", lessonData);
+        console.log("Registrations:", registrations);
         
         setWorkshop(workshopData);
         setLessons(lessonData);
@@ -91,6 +104,11 @@ const WorkshopView = () => {
     );
   }
 
+  // Format dates for display
+  const startDate = convertTimestampToDate(workshop.schedule.startDate);
+  const endDate = workshop.schedule.endDate ? 
+    convertTimestampToDate(workshop.schedule.endDate) : null;
+
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto">
@@ -129,9 +147,22 @@ const WorkshopView = () => {
                   </p>
                 </div>
                 <div>
+                  <h3 className="text-sm font-medium text-gray-500">Schedule</h3>
+                  <p className="mt-1">
+                    {startDate.toLocaleDateString()} 
+                    {endDate ? ` - ${endDate.toLocaleDateString()}` : ""}
+                  </p>
+                </div>
+                <div className="md:col-span-2">
                   <h3 className="text-sm font-medium text-gray-500">Skills Addressed</h3>
                   <p className="mt-1">{workshop.skillsAddressed.join(", ")}</p>
                 </div>
+                {workshop.creatorName && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Created By</h3>
+                    <p className="mt-1">{workshop.creatorName}</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -143,6 +174,7 @@ const WorkshopView = () => {
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <p className="text-lg text-gray-500">No lessons available yet.</p>
+                  <p className="text-sm text-gray-400 mt-2">The instructor will add lessons soon.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -150,7 +182,7 @@ const WorkshopView = () => {
                 {lessons
                   .sort((a, b) => a.order - b.order)
                   .map((lesson, index) => (
-                    <Card key={lesson.id}>
+                    <Card key={lesson.id} className="hover:shadow-md transition-shadow">
                       <CardHeader className="pb-2">
                         <div className="flex justify-between">
                           <div>
