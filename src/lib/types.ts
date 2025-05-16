@@ -17,14 +17,14 @@ export interface Workshop {
   creatorId: string;
   creatorName?: string;
   schedule: {
-    startDate: Date;
-    endDate?: Date;
+    startDate: Date | { seconds: number; nanoseconds: number };
+    endDate?: Date | { seconds: number; nanoseconds: number };
     isOpen: boolean;
   };
   skillsAddressed: string[];
   difficulty: "beginner" | "intermediate" | "advanced";
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | { seconds: number; nanoseconds: number };
+  updatedAt: Date | { seconds: number; nanoseconds: number };
 }
 
 export interface Lesson {
@@ -35,6 +35,6 @@ export interface Lesson {
   requiresReflection: boolean;
   order: number;
   estimatedDuration: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | { seconds: number; nanoseconds: number };
+  updatedAt: Date | { seconds: number; nanoseconds: number };
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -32,6 +31,15 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { createWorkshop, getWorkshopById, updateWorkshop } from "@/services/workshopService";
+
+// Helper function to safely convert Firestore timestamp to Date
+const convertTimestampToDate = (timestamp: any): Date => {
+  if (timestamp instanceof Date) return timestamp;
+  if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
+    return new Date(timestamp.seconds * 1000);
+  }
+  return new Date();
+};
 
 // Define form schema with Zod
 const workshopSchema = z.object({
@@ -78,15 +86,11 @@ const WorkshopForm = () => {
         setIsFetching(true);
         const workshopData = await getWorkshopById(id);
 
-        // Convert Firestore timestamp to Date if necessary
-        const startDate = workshopData.schedule.startDate instanceof Date 
-          ? workshopData.schedule.startDate 
-          : new Date(workshopData.schedule.startDate?.seconds * 1000);
-
-        const endDate = workshopData.schedule.endDate
-          ? workshopData.schedule.endDate instanceof Date 
-              ? workshopData.schedule.endDate 
-              : new Date(workshopData.schedule.endDate?.seconds * 1000)
+        // Safely convert Firestore timestamps to Date objects
+        const startDate = convertTimestampToDate(workshopData.schedule.startDate);
+        
+        const endDate = workshopData.schedule.endDate 
+          ? convertTimestampToDate(workshopData.schedule.endDate)
           : undefined;
 
         form.reset({

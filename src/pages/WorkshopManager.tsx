@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+// Helper function to safely convert Firestore timestamp to Date
+const convertTimestampToDate = (timestamp: any): Date => {
+  if (timestamp instanceof Date) return timestamp;
+  if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
+    return new Date(timestamp.seconds * 1000);
+  }
+  return new Date();
+};
 
 const WorkshopManager = () => {
   const { user } = useAuth();
@@ -161,9 +169,7 @@ const WorkshopManager = () => {
                   <div className="text-sm text-gray-500">
                     <p>Skills: {workshop.skillsAddressed.join(", ")}</p>
                     <p className="mt-1">
-                      Created: {workshop.createdAt instanceof Date 
-                        ? workshop.createdAt.toLocaleDateString() 
-                        : new Date(workshop.createdAt?.seconds * 1000).toLocaleDateString()}
+                      Created: {convertTimestampToDate(workshop.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </CardContent>
