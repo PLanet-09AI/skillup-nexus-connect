@@ -17,6 +17,7 @@ import LessonView from "@/pages/LessonView";
 import ReflectionReview from "@/pages/ReflectionReview";
 import WorkshopBrowser from "@/pages/WorkshopBrowser";
 import WorkshopView from "@/pages/WorkshopView";
+import LearnerProfiles from "@/pages/LearnerProfiles";
 import { AuthProvider } from "@/hooks/use-auth";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import RoleBasedRoute from "@/components/auth/RoleBasedRoute";
@@ -172,7 +173,7 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <RoleBasedRoute roles={["recruiter"]}>
-                    <div>Learner Profiles page placeholder</div>
+                    <LearnerProfiles />
                   </RoleBasedRoute>
                 </ProtectedRoute>
               }

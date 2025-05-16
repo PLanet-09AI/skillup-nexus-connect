@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,14 +10,6 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Workshop } from "@/lib/types";
 import { getWorkshopsByCreator, deleteWorkshop } from "@/services/workshopService";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -26,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 // Helper function to safely convert Firestore timestamp to Date
 const convertTimestampToDate = (timestamp: any): Date => {
@@ -34,6 +28,15 @@ const convertTimestampToDate = (timestamp: any): Date => {
     return new Date(timestamp.seconds * 1000);
   }
   return new Date();
+};
+
+// Format date helper
+const formatDate = (date: Date): string => {
+  return date.toLocaleDateString('en-US', { 
+    day: 'numeric', 
+    month: 'short', 
+    year: 'numeric'
+  });
 };
 
 const WorkshopManager = () => {
@@ -80,6 +83,10 @@ const WorkshopManager = () => {
     navigate(`/workshops/${workshopId}/lessons`);
   };
 
+  const handleAddLessons = (workshopId: string) => {
+    navigate(`/workshops/${workshopId}/create-lesson`);
+  };
+
   const confirmDelete = (workshopId: string) => {
     setWorkshopToDelete(workshopId);
     setIsDeleteDialogOpen(true);
@@ -108,6 +115,12 @@ const WorkshopManager = () => {
     }
   };
 
+  // Helper function to truncate long text
+  const truncateText = (text: string, maxLength: number) => {
+    if (!text) return '';
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -124,7 +137,7 @@ const WorkshopManager = () => {
         
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-major-blue"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : workshops.length === 0 ? (
           <Card>
@@ -143,66 +156,93 @@ const WorkshopManager = () => {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {workshops.map((workshop) => (
-              <Card key={workshop.id} className="overflow-hidden">
-                <CardHeader className="pb-2">
-                  <CardTitle>{workshop.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {workshop.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`px-2 py-1 text-xs rounded ${
-                      workshop.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
-                      workshop.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {workshop.difficulty.charAt(0).toUpperCase() + workshop.difficulty.slice(1)}
+            {workshops.map((workshop) => {
+              const startDate = convertTimestampToDate(workshop.schedule.startDate);
+              const endDate = workshop.schedule.endDate ? 
+                convertTimestampToDate(workshop.schedule.endDate) : null;
+              
+              return (
+                <Card key={workshop.id} className="overflow-hidden flex flex-col">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant={workshop.schedule.isOpen ? "default" : "outline"} className="mb-2">
+                        {workshop.schedule.isOpen ? "Open" : "Closed"}
+                      </Badge>
+                      <Badge
+                        className={`${
+                          workshop.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                          workshop.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {workshop.difficulty.charAt(0).toUpperCase() + workshop.difficulty.slice(1)}
+                      </Badge>
                     </div>
-                    <div className={`px-2 py-1 text-xs rounded ${
-                      workshop.schedule.isOpen ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {workshop.schedule.isOpen ? 'Open' : 'Closed'}
+                    <CardTitle>{workshop.title}</CardTitle>
+                    <CardDescription className="line-clamp-2 mt-2">
+                      {truncateText(workshop.description, 100)}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500">Schedule</h4>
+                        <p className="text-sm">
+                          {formatDate(startDate)} 
+                          {endDate ? ` - ${formatDate(endDate)}` : ""}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500">Skills Addressed</h4>
+                        <p className="text-sm line-clamp-1">
+                          {workshop.skillsAddressed.map(skill => 
+                            truncateText(skill, 60)
+                          ).join(", ")}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    <p>Skills: {workshop.skillsAddressed.join(", ")}</p>
-                    <p className="mt-1">
-                      Created: {convertTimestampToDate(workshop.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between pt-2 border-t">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleViewLessons(workshop.id as string)}
-                    className="flex items-center gap-1"
-                  >
-                    <BookOpen className="h-3 w-3" />
-                    Lessons
-                  </Button>
-                  <div className="flex gap-2">
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-3 pt-3 border-t">
                     <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => handleEditWorkshop(workshop.id as string)}
+                      variant="default" 
+                      className="w-full flex items-center justify-center gap-2"
+                      onClick={() => handleAddLessons(workshop.id as string)}
                     >
-                      <Edit className="h-4 w-4" />
+                      <PlusCircle className="h-4 w-4" />
+                      Add Lesson
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => confirmDelete(workshop.id as string)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))}
+                    <div className="flex justify-between w-full">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewLessons(workshop.id as string)}
+                        className="flex items-center gap-1"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                        Manage Lessons
+                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => handleEditWorkshop(workshop.id as string)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => confirmDelete(workshop.id as string)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
