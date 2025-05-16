@@ -9,6 +9,9 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import NotFound from "@/pages/NotFound";
+import WorkshopManager from "@/pages/WorkshopManager";
+import WorkshopForm from "@/pages/WorkshopForm";
+import LessonManager from "@/pages/LessonManager";
 import { AuthProvider } from "@/hooks/use-auth";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import RoleBasedRoute from "@/components/auth/RoleBasedRoute";
@@ -74,7 +77,37 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <RoleBasedRoute roles={["recruiter"]}>
-                    <div>Workshop Manager page placeholder</div>
+                    <WorkshopManager />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create-workshop"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute roles={["recruiter"]}>
+                    <WorkshopForm />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit-workshop/:id"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute roles={["recruiter"]}>
+                    <WorkshopForm />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workshops/:workshopId/lessons"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute roles={["recruiter"]}>
+                    <LessonManager />
                   </RoleBasedRoute>
                 </ProtectedRoute>
               }

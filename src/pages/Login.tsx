@@ -27,9 +27,14 @@ const Login = () => {
       });
       navigate("/dashboard");
     } catch (error: any) {
+      console.error("Login error:", error);
       let errorMessage = "Failed to login. Please check your credentials.";
       if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
         errorMessage = "Invalid email or password.";
+      } else if (error.code === "auth/invalid-credential") {
+        errorMessage = "Invalid credentials. Please check your email and password.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many failed login attempts. Please try again later.";
       }
       toast({
         title: "Login error",
